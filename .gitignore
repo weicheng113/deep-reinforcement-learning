@@ -102,4 +102,7 @@ ENV/
 
 # mypy
 .mypy_cache/
-Banana.app.zip
+
+# my changes
+/p1_navigation/Banana.app/
+/p1_navigation/Banana.app.zip
