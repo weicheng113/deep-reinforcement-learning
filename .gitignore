@@ -106,3 +106,5 @@ ENV/
 # my changes
 /p1_navigation/Banana.app/
 /p1_navigation/Banana.app.zip
+/**/.idea
+/**/*.iml

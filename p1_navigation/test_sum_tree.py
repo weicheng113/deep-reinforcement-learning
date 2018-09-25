@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from p1_navigation.sum_tree import SumTree
+from sum_tree import SumTree
 
 
 class TestSumTree(unittest.TestCase):
