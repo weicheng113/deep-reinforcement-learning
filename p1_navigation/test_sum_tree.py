@@ -39,3 +39,18 @@ class TestSumTree(unittest.TestCase):
 
         instance.update(tree_idx=5, p=3-1)
         np.testing.assert_array_equal([11, 5, 6, 1, 4, 2, 4], instance.tree)
+
+    def test_len(self):
+        instance = SumTree(4)
+
+        instance.add(p=1, data=1)
+        self.assertEqual(len(instance), 1)
+
+        instance.add(p=2, data=2)
+        self.assertEqual(len(instance), 2)
+
+        instance.add(p=3, data=3)
+        instance.add(p=4, data=4)
+        instance.add(p=5, data=5)
+
+        self.assertEqual(len(instance), 4)
