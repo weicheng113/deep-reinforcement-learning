@@ -104,7 +104,7 @@ ENV/
 .mypy_cache/
 
 # my changes
-/p1_navigation/Banana.app/
-/p1_navigation/Banana.app.zip
+/**/*.app/
+/**/*.app.zip
 /**/.idea
 /**/*.iml
