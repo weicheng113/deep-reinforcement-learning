@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class QNetwork(nn.Module):
+class Network(nn.Module):
     """Actor (Policy) Model."""
 
     def __init__(self, state_size, action_size, seed):
@@ -13,21 +13,21 @@ class QNetwork(nn.Module):
             action_size (int): Dimension of each action
             seed (int): Random seed
         """
-        super(QNetwork, self).__init__()
+        super(Network, self).__init__()
         self.seed = torch.manual_seed(seed)
         "*** YOUR CODE HERE ***"
-        feature_size = 256
+        feature_size = 64
         self.feature_layer = nn.Sequential(
             nn.Linear(state_size, feature_size),
             nn.ReLU())
         
-        value_size = 128
+        value_size = 64
         self.value_layer = nn.Sequential(
             nn.Linear(feature_size, value_size),
             nn.ReLU(),
             nn.Linear(value_size, 1))
         
-        advantage_size = 128
+        advantage_size = 64
         self.advantage_layer = nn.Sequential(
             nn.Linear(feature_size, advantage_size),
             nn.ReLU(),
@@ -40,5 +40,5 @@ class QNetwork(nn.Module):
         action_value = self.value_layer(feature)
         advantage = self.advantage_layer(feature)
         
-        q_value = action_value + (advantage - advantage.mean())
+        q_value = action_value + (advantage - advantage.mean(dim=1, keepdim=True))
         return q_value

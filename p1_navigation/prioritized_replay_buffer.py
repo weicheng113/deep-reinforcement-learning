@@ -26,20 +26,21 @@ class PrioritizedReplayBuffer:
         #   only at the end of learning.
 
         self.epsilon = 0.01
-        self.alpha = 1.0
-        self.beta = 0.4
-        self.beta_increment_per_sampling = 0.001
+        self.alpha = 0.6
+        
+        beta_start = 0.4
+        self.beta_end = 1.0
+        self.beta = beta_start
+        beta_increments = 200
+        self.beta_increment = (self.beta_end - beta_start)/beta_increments
 
     def add(self, state, action, reward, next_state, done):
         """Add a new experience to memory."""
         experience = self.experience(state, action, reward, next_state, done)
         p = self.memory.max_p()
         if p == 0:
-            p = self._calculate_priority(error=1.0)
+            p = 1.0
         self.memory.add(p=p, data=experience)
-
-    def _calculate_priority(self, error):
-        return (error + self.epsilon) ** self.alpha
 
     def sample(self, n):
         """Randomly sample a batch of experiences from memory."""
@@ -68,14 +69,20 @@ class PrioritizedReplayBuffer:
         w_is_normalized = w_is/w_is.max()
         # print(f"w_IS_normalized: {w_IS_normalized}")
         # w_is_normalized = torch.from_numpy(w_is_normalized).float().to(self.device)
-
-        self.beta = min(1., self.beta + self.beta_increment_per_sampling)
+        
         return experiences, indices, w_is_normalized
 
     def update_errors(self, indices, errors):
-        priorities = [self._calculate_priority(e) for e in errors]
+        priorities = [self._to_priority(e) for e in errors]
         for (idx, p) in zip(indices, priorities):
             self.memory.update(idx, p)
+
+    def _to_priority(self, error):
+        return (error + self.epsilon) ** self.alpha
+    
+    def increase_beta(self):
+        if self.beta < self.beta_end:
+            self.beta = min(self.beta_end, self.beta + self.beta_increment)
 
     def __len__(self):
         return len(self.memory)

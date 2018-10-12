@@ -82,7 +82,10 @@ class SumTree:
         return self.tree[0]
 
     def max_p(self):
-        return np.max(self.tree[-self.capacity:])
+        if len(self) == 0:
+            return 0.0
+        else:
+            return np.max(self.tree[-self.capacity:])
 
     def __len__(self):
         return np.count_nonzero(self.data)
