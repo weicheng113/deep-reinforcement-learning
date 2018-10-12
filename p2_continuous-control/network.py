@@ -20,8 +20,8 @@ class Actor(nn.Module):
         self.output = nn.Linear(in_features=fc2_units, out_features=action_dim)
 
         self.bn1 = nn.BatchNorm1d(num_features=state_dim)
-        self.bn2 = nn.BatchNorm1d(num_features=fc1_units)
-        self.bn3 = nn.BatchNorm1d(num_features=fc2_units)
+        # self.bn2 = nn.BatchNorm1d(num_features=fc1_units)
+        # self.bn3 = nn.BatchNorm1d(num_features=fc2_units)
 
         init_weights(self.fc1)
         init_weights(self.fc2)
@@ -31,10 +31,10 @@ class Actor(nn.Module):
         x = self.bn1(state)
         x = F.relu(self.fc1(x))
 
-        x = self.bn2(x)
+        # x = self.bn2(x)
         x = F.relu(self.fc2(x))
 
-        x = self.bn3(x)
+        # x = self.bn3(x)
         x = self.output(x)
         return F.tanh(x)
 
