@@ -28,10 +28,12 @@ class TestAgent(unittest.TestCase):
 
     def test_discounted_returns(self):
         self.agent.discount = 0.9
-        returns = self.agent.discounted_returns(np.array([1, 0, 2], dtype=np.float))
+        rewards = np.array([1, 0, 2, 1], dtype=np.float)
+        dones = np.array([False, False, False, True])
+        returns = self.agent.discounted_returns(rewards, dones)
         np.testing.assert_equal(
             returns,
-            np.array([1*1 + 0*0.9 + 2*0.81, 0*1 + 2*0.9, 2*1], dtype=np.float))
+            np.array([(1*1 + 0*0.9 + 2*0.81 + 0), (0*1 + 2*0.9 + 0), (2*1 + 0), 0], dtype=np.float))
 
     def test_learn_policy(self):
         n_states = 3
@@ -71,6 +73,7 @@ class TestAgent(unittest.TestCase):
         states = np.random.random_sample((n_trajectories, n_states) + self.state_dim)
         actions = np.random.randint(self.action_dim, size=(n_trajectories, n_states))
         rewards = np.random.random_sample((n_trajectories, n_states))
+        dones = np.random.choice(a=[False, True], size=(n_trajectories, n_states), p=[0.9, 0.1])
 
         self.agent.learn(
             action_probs=probs,
@@ -78,9 +81,58 @@ class TestAgent(unittest.TestCase):
             actions=actions,
             rewards=rewards,
             next_states=None,
-            dones=None)
+            dones=dones)
         self.assertTrue(True)
 
     def test_reshape(self):
         arr = np.array([[1, 2, 3], [4, 5, 6]])
         np.testing.assert_equal(arr.reshape(-1), np.array([1, 2, 3, 4, 5, 6]))
+
+    def test_learn_policy_progress(self):
+        n_states = 64
+        probs = np.random.random_sample(n_states)
+        advantages = np.random.random_sample(n_states)
+        states = np.random.random_sample((n_states, ) + self.state_dim)
+        actions = np.random.randint(self.action_dim, size=n_states)
+
+        objectives = []
+        for _ in range(10):
+            objective = self.agent.learn_policy(
+                sampled_probs=probs,
+                sampled_advantages=advantages,
+                sampled_states=states,
+                sampled_actions=actions)
+            objectives.append(objective.item())
+        self.assertEqual(objectives, sorted(objectives))
+
+    def test_learn_value_progress(self):
+        n_states = 64
+        returns = np.random.random_sample(n_states)
+        states = np.random.random_sample((n_states, ) + self.state_dim)
+
+        losses = []
+        for _ in range(10):
+            loss = self.agent.learn_value(states=states, sampled_returns=returns)
+            losses.append(loss.item())
+        self.assertEqual(losses, sorted(losses, reverse=True))
+
+    def test_learn_progress(self):
+        n_trajectories = 4
+        n_states = 64
+
+        probs = np.random.random_sample((n_trajectories, n_states))
+        states = np.random.random_sample((n_trajectories, n_states) + self.state_dim)
+        actions = np.random.randint(self.action_dim, size=(n_trajectories, n_states))
+        rewards = np.random.random_sample((n_trajectories, n_states))
+        dones = np.random.choice(a=[False, True], size=(n_trajectories, n_states), p=[0.9, 0.1])
+
+        objectives, losses = self.agent.learn(
+            action_probs=probs,
+            states=states,
+            actions=actions,
+            rewards=rewards,
+            next_states=None,
+            dones=dones)
+
+        self.assertEqual(objectives, sorted(objectives))
+        self.assertEqual(losses, sorted(losses, reverse=True))

@@ -35,7 +35,7 @@ class Agent:
         states = states.reshape(state_shape)
         actions = actions.reshape(value_shape)
         values = self.sampled_values(states).reshape(value_shape)
-        returns = np.apply_along_axis(self.discounted_returns, axis=1, arr=rewards)
+        returns = np.array([self.discounted_returns(r, d) for r, d in zip(rewards, dones)])
         returns = returns.reshape(value_shape)
         # next_states = next_states.reshape(state_shape)
         # dones = dones.reshape(value_shape)
@@ -43,13 +43,17 @@ class Agent:
         advantages = returns - values
         advantages_normalized = (advantages - advantages.mean()) / (advantages.std() + 1.0e-10)
 
+        objectives = []
+        losses = []
         for _ in range(self.optimization_epochs):
-            self.learn_policy(
+            objective = self.learn_policy(
                 sampled_probs=action_probs,
                 sampled_advantages=advantages_normalized,
                 sampled_states=states,
                 sampled_actions=actions)
-            self.learn_value(states=states, sampled_returns=returns)
+            loss = self.learn_value(states=states, sampled_returns=returns)
+            objectives.append(objective.item())
+            losses.append(loss.item())
 
         # the clipping parameter reduces as time goes on
         self.epsilon *= 0.999
@@ -57,6 +61,8 @@ class Agent:
         # the regulation term also reduces
         # this reduces exploration in later runs
         self.beta *= 0.995
+
+        return objectives, losses
 
     def sampled_values(self, states):
         states = torch.tensor(states, dtype=torch.float, device=self.device)
@@ -67,10 +73,13 @@ class Agent:
 
         return values.cpu().detach().numpy().squeeze()
 
-    def discounted_returns(self, rewards):
-        n_rewards = rewards.size
-        discounts = self.discount**np.arange(n_rewards+1)
-        return np.array([rewards[i:].dot(discounts[:-(i+1)]) for i in range(n_rewards)], dtype=np.float)
+    def discounted_returns(self, rewards, dones):
+        running_return = 0
+        returns = np.zeros_like(rewards)
+        for i in reversed(range(len(rewards) - 1)):
+            running_return = rewards[i] + self.discount * (1-dones[i]) * running_return
+            returns[i] = running_return
+        return returns
 
     def learn_policy(self, sampled_probs, sampled_advantages, sampled_states, sampled_actions):
         sampled_probs = torch.tensor(sampled_probs, dtype=torch.float, device=self.device)
@@ -92,6 +101,8 @@ class Agent:
         (-objective).backward()
         self.actor_optimizer.step()
 
+        return objective.cpu().detach().numpy().squeeze()
+
     @staticmethod
     def prob_entropy(old_probs, new_probs):
         # include a regularization term
@@ -110,3 +121,5 @@ class Agent:
         self.critic_optimizer.zero_grad()
         loss.backward()
         self.critic_optimizer.step()
+
+        return loss.cpu().detach().numpy().squeeze()
