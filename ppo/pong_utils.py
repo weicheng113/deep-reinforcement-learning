@@ -1,4 +1,4 @@
-from parallelEnv import parallelEnv 
+from parallelEnv import parallelEnv
 import matplotlib
 import matplotlib.pyplot as plt
 import torch
@@ -13,7 +13,7 @@ RIGHT=4
 LEFT=5
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
- 
+
 # preprocess a single frame
 # crop image and downsample to 80x80
 # stack two frames together as input
@@ -41,13 +41,13 @@ def animate_frames(frames):
     # color option for plotting
     # use Greys for greyscale
     cmap = None if len(frames[0].shape)==3 else 'Greys'
-    patch = plt.imshow(frames[0], cmap=cmap)  
+    patch = plt.imshow(frames[0], cmap=cmap)
 
     fanim = animation.FuncAnimation(plt.gcf(), \
         lambda x: patch.set_data(frames[x]), frames = len(frames), interval=30)
-    
+
     display(display_animation(fanim, default_mode='once'))
-    
+
 # play a game and display the animation
 # nrand = number of random steps before using the policy
 def play(env, policy, time=2000, preprocess=None, nrand=5):
@@ -55,19 +55,19 @@ def play(env, policy, time=2000, preprocess=None, nrand=5):
 
     # star game
     env.step(1)
-    
+
     # perform nrand random steps in the beginning
     for _ in range(nrand):
         frame1, reward1, is_done, _ = env.step(np.random.choice([RIGHT,LEFT]))
         frame2, reward2, is_done, _ = env.step(0)
-    
+
     anim_frames = []
-    
+
     for _ in range(time):
-        
+
         frame_input = preprocess_batch([frame1, frame2])
         prob = policy(frame_input)
-        
+
         # RIGHT = 4, LEFT = 5
         action = RIGHT if rand.random() < prob else LEFT
         frame1, _, is_done, _ = env.step(action)
@@ -80,17 +80,17 @@ def play(env, policy, time=2000, preprocess=None, nrand=5):
 
         if is_done:
             break
-    
+
     env.close()
-    
+
     animate_frames(anim_frames)
-    return 
+    return
 
 
 
 # collect trajectories for a parallelized parallelEnv object
 def collect_trajectories(envs, policy, tmax=200, nrand=5):
-    
+
     # number of parallel instances
     n=len(envs.ps)
 
@@ -101,45 +101,45 @@ def collect_trajectories(envs, policy, tmax=200, nrand=5):
     action_list=[]
 
     envs.reset()
-    
+
     # start all parallel agents
     envs.step([1]*n)
-    
+
     # perform nrand random steps
     for _ in range(nrand):
         fr1, re1, _, _ = envs.step(np.random.choice([RIGHT, LEFT],n))
         fr2, re2, _, _ = envs.step([0]*n)
-    
+
     for t in range(tmax):
 
         # prepare the input
-        # preprocess_batch properly converts two frames into 
+        # preprocess_batch properly converts two frames into
         # shape (n, 2, 80, 80), the proper input for the policy
         # this is required when building CNN with pytorch
         batch_input = preprocess_batch([fr1,fr2])
-        
+
         # probs will only be used as the pi_old
         # no gradient propagation is needed
         # so we move it to the cpu
         probs = policy(batch_input).squeeze().cpu().detach().numpy()
-        
+
         action = np.where(np.random.rand(n) < probs, RIGHT, LEFT)
         probs = np.where(action==RIGHT, probs, 1.0-probs)
-        
-        
+
+
         # advance the game (0=no action)
         # we take one action and skip game forward
         fr1, re1, is_done, _ = envs.step(action)
         fr2, re2, is_done, _ = envs.step([0]*n)
 
         reward = re1 + re2
-        
+
         # store the result
         state_list.append(batch_input)
         reward_list.append(reward)
         prob_list.append(probs)
         action_list.append(action)
-        
+
         # stop if any of the trajectories is done
         # we want all the lists to be retangular
         if is_done.any():
@@ -163,15 +163,15 @@ def surrogate(policy, old_probs, states, actions, rewards,
 
     discount = discount**np.arange(len(rewards))
     rewards = np.asarray(rewards)*discount[:,np.newaxis]
-    
+
     # convert rewards to future rewards
     rewards_future = rewards[::-1].cumsum(axis=0)[::-1]
-    
+
     mean = np.mean(rewards_future, axis=1)
     std = np.std(rewards_future, axis=1) + 1.0e-10
 
     rewards_normalized = (rewards_future - mean[:,np.newaxis])/std[:,np.newaxis]
-    
+
     # convert everything into pytorch tensors and move to gpu if available
     actions = torch.tensor(actions, dtype=torch.int8, device=device)
     old_probs = torch.tensor(old_probs, dtype=torch.float, device=device)
@@ -191,7 +191,7 @@ def surrogate(policy, old_probs, states, actions, rewards,
 
     return torch.mean(ratio*rewards + beta*entropy)
 
-    
+
 # clipped surrogate function
 # similar as -policy_loss for REINFORCE, but for PPO
 def clipped_surrogate(policy, old_probs, states, actions, rewards,
@@ -199,16 +199,16 @@ def clipped_surrogate(policy, old_probs, states, actions, rewards,
                       epsilon=0.1, beta=0.01):
     discount = discount**np.arange(len(rewards))
     rewards = np.asarray(rewards)*discount[:,np.newaxis]
-    
+
     # convert rewards to future rewards
     rewards_future = rewards[::-1].cumsum(axis=0)[::-1]
-    
+
     mean = np.mean(rewards_future, axis=1)
     std = np.std(rewards_future, axis=1) + 1.0e-10
-    print(f"rewards_future[:2]: {rewards_future[:2]}")
+    # print(f"rewards_future[:2]: {rewards_future[:2]}")
 
     rewards_normalized = (rewards_future - mean[:,np.newaxis])/std[:,np.newaxis]
-    
+
     # convert everything into pytorch tensors and move to gpu if available
     actions = torch.tensor(actions, dtype=torch.int8, device=device)
     old_probs = torch.tensor(old_probs, dtype=torch.float, device=device)
@@ -217,7 +217,7 @@ def clipped_surrogate(policy, old_probs, states, actions, rewards,
     # convert states to policy (or probability)
     new_probs = states_to_prob(policy, states)
     new_probs = torch.where(actions == RIGHT, new_probs, 1.0-new_probs)
-    
+
     # ratio for clipping
     ratio = new_probs/old_probs
 
@@ -231,7 +231,7 @@ def clipped_surrogate(policy, old_probs, states, actions, rewards,
     entropy = -(new_probs*torch.log(old_probs+1.e-10)+ \
         (1.0-new_probs)*torch.log(1.0-old_probs+1.e-10))
 
-    
+
     # this returns an average of all the entries of the tensor
     # effective computing L_sur^clip / T
     # averaged over time-step and number of trajectories
@@ -252,18 +252,18 @@ class Policy(nn.Module):
         # 38x38x4 to 9x9x32
         self.conv2 = nn.Conv2d(4, 16, kernel_size=6, stride=4)
         self.size=9*9*16
-        
+
         # two fully connected layer
         self.fc1 = nn.Linear(self.size, 256)
         self.fc2 = nn.Linear(256, 1)
 
-        # Sigmoid to 
+        # Sigmoid to
         self.sig = nn.Sigmoid()
-        
+
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = x.view(-1,self.size)
         x = F.relu(self.fc1(x))
         return self.sig(self.fc2(x))
-    
+
