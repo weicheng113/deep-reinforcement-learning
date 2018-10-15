@@ -24,7 +24,3 @@ class TestPongHelper(unittest.TestCase):
         result = PongHelper.stack_frames([s1, s2])
 
         self.assertEqual(result.shape, (2, 80, 80))
-
-
-
-

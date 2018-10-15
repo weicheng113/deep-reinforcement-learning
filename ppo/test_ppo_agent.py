@@ -35,28 +35,6 @@ class TestAgent(unittest.TestCase):
             returns,
             np.array([(1*1 + 0*0.9 + 2*0.81 + 0), (0*1 + 2*0.9 + 0), (2*1 + 0), 0], dtype=np.float))
 
-    def test_learn_policy(self):
-        n_states = 3
-        probs = np.random.random_sample(n_states)
-        advantages = np.random.random_sample(n_states)
-        states = np.random.random_sample((n_states, ) + self.state_dim)
-        actions = np.random.randint(self.action_dim, size=n_states)
-
-        self.agent.learn_policy(
-            sampled_probs=probs,
-            sampled_advantages=advantages,
-            sampled_states=states,
-            sampled_actions=actions)
-        self.assertTrue(True)
-
-    def test_learn_value(self):
-        n_states = 3
-        returns = np.random.random_sample(n_states)
-        states = np.random.random_sample((n_states, ) + self.state_dim)
-
-        self.agent.learn_value(states=states, sampled_returns=returns)
-        self.assertTrue(True)
-
     def test_prob_entropy(self):
         n_states = 3
         old_probs = torch.tensor(np.random.random_sample(n_states))
@@ -92,29 +70,24 @@ class TestAgent(unittest.TestCase):
         n_states = 64
         probs = np.random.random_sample(n_states)
         advantages = np.random.random_sample(n_states)
+        returns = np.random.random_sample(n_states)
         states = np.random.random_sample((n_states, ) + self.state_dim)
         actions = np.random.randint(self.action_dim, size=n_states)
 
-        objectives = []
+        policy_losses = []
+        value_losses = []
         for _ in range(10):
-            objective = self.agent.learn_policy(
+            policy_loss, value_loss = self.agent.learn_policy(
                 sampled_probs=probs,
                 sampled_advantages=advantages,
                 sampled_states=states,
-                sampled_actions=actions)
-            objectives.append(objective.item())
-        self.assertEqual(objectives, sorted(objectives))
+                sampled_actions=actions,
+                sampled_returns=returns)
+            policy_losses.append(policy_loss.item())
+            value_losses.append(value_loss.item())
 
-    def test_learn_value_progress(self):
-        n_states = 64
-        returns = np.random.random_sample(n_states)
-        states = np.random.random_sample((n_states, ) + self.state_dim)
-
-        losses = []
-        for _ in range(10):
-            loss = self.agent.learn_value(states=states, sampled_returns=returns)
-            losses.append(loss.item())
-        self.assertEqual(losses, sorted(losses, reverse=True))
+        self.assertEqual(policy_losses, sorted(policy_losses, reverse=True))
+        self.assertEqual(value_losses, sorted(value_losses, reverse=True))
 
     def test_learn_progress(self):
         n_trajectories = 4
@@ -126,7 +99,7 @@ class TestAgent(unittest.TestCase):
         rewards = np.random.random_sample((n_trajectories, n_states))
         dones = np.random.choice(a=[False, True], size=(n_trajectories, n_states), p=[0.9, 0.1])
 
-        objectives, losses = self.agent.learn(
+        policy_losses, value_losses = self.agent.learn(
             action_probs=probs,
             states=states,
             actions=actions,
@@ -134,5 +107,5 @@ class TestAgent(unittest.TestCase):
             next_states=None,
             dones=dones)
 
-        self.assertEqual(objectives, sorted(objectives))
-        self.assertEqual(losses, sorted(losses, reverse=True))
+        self.assertEqual(policy_losses, sorted(policy_losses, reverse=True))
+        self.assertEqual(value_losses, sorted(value_losses, reverse=True))

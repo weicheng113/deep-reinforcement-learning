@@ -9,8 +9,7 @@ class Agent:
                  epsilon=0.1, beta=0.01, actor_lr=1e-4, critic_lr=1e-4, device='cpu'):
         self.actor = create_actor()
         self.critic = create_critic()
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=actor_lr)
-        self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=actor_lr)
+        self.optimizer = optim.Adam(list(self.actor.parameters()) + list(self.critic.parameters()), lr=actor_lr)
 
         self.discount = discount
         self.epsilon = epsilon
@@ -43,17 +42,18 @@ class Agent:
         advantages = returns - values
         advantages_normalized = (advantages - advantages.mean()) / (advantages.std() + 1.0e-10)
 
-        objectives = []
-        losses = []
+        policy_losses = []
+        value_losses = []
         for _ in range(self.optimization_epochs):
-            objective = self.learn_policy(
+            policy_loss, value_loss = self.learn_policy(
                 sampled_probs=action_probs,
                 sampled_advantages=advantages_normalized,
                 sampled_states=states,
-                sampled_actions=actions)
-            loss = self.learn_value(states=states, sampled_returns=returns)
-            objectives.append(objective.item())
-            losses.append(loss.item())
+                sampled_actions=actions,
+                sampled_returns=returns)
+
+            policy_losses.append(policy_loss.item())
+            value_losses.append(value_loss.item())
 
         # the clipping parameter reduces as time goes on
         self.epsilon *= 0.999
@@ -62,7 +62,7 @@ class Agent:
         # this reduces exploration in later runs
         self.beta *= 0.995
 
-        return objectives, losses
+        return policy_losses, value_losses
 
     def sampled_values(self, states):
         states = torch.tensor(states, dtype=torch.float, device=self.device)
@@ -81,12 +81,13 @@ class Agent:
             returns[i] = running_return
         return returns
 
-    def learn_policy(self, sampled_probs, sampled_advantages, sampled_states, sampled_actions):
+    def learn_policy(self, sampled_probs, sampled_advantages, sampled_states, sampled_actions, sampled_returns):
         sampled_probs = torch.tensor(sampled_probs, dtype=torch.float, device=self.device)
         sampled_advantages = torch.tensor(sampled_advantages, dtype=torch.float, device=self.device)
         sampled_states = torch.tensor(sampled_states, dtype=torch.float, device=self.device)
         sampled_actions = torch.tensor(sampled_actions, dtype=torch.long, device=self.device)
 
+        # actor
         _, probs_new = self.actor(sampled_states, sampled_actions)
         ratio = probs_new / sampled_probs
 
@@ -94,14 +95,19 @@ class Agent:
         objective = torch.min(ratio * sampled_advantages, ratio_clipped * sampled_advantages)
 
         entropy = Agent.prob_entropy(old_probs=sampled_probs, new_probs=probs_new)
+        policy_loss = -torch.mean(objective + self.beta*entropy)
+        # critic
+        values = self.critic(sampled_states)
+        sampled_returns = torch.tensor(sampled_returns, dtype=torch.float, device=self.device)
+        value_loss = F.mse_loss(input=sampled_returns, target=values)
 
-        objective = torch.mean(objective + self.beta*entropy)
+        # optimize
+        loss = policy_loss + 0.5 * value_loss
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
-        self.actor_optimizer.zero_grad()
-        (-objective).backward()
-        self.actor_optimizer.step()
-
-        return objective.cpu().detach().numpy().squeeze()
+        return policy_loss.cpu().detach().numpy().squeeze(), value_loss.cpu().detach().numpy().squeeze()
 
     @staticmethod
     def prob_entropy(old_probs, new_probs):
@@ -110,16 +116,3 @@ class Agent:
         # prevents policy to become exactly 0 or 1 helps exploration
         # add in 1.e-10 to avoid log(0) which gives nan
         return -(new_probs * torch.log(old_probs + 1.e-10) + (1.0 - new_probs) * torch.log(1.0 - old_probs + 1.e-10))
-
-    def learn_value(self, states, sampled_returns):
-        states = torch.tensor(states, dtype=torch.float, device=self.device)
-        values = self.critic(states)
-        sampled_returns = torch.tensor(sampled_returns, dtype=torch.float, device=self.device)
-
-        loss = F.mse_loss(input=sampled_returns, target=values)
-
-        self.critic_optimizer.zero_grad()
-        loss.backward()
-        self.critic_optimizer.step()
-
-        return loss.cpu().detach().numpy().squeeze()
