@@ -108,3 +108,5 @@ ENV/
 /**/*.app.zip
 /**/.idea
 /**/*.iml
+/maddpg_try/**
+/maddpg/**
