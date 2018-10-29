@@ -78,7 +78,7 @@ class TestAgent(unittest.TestCase):
         value_losses = []
         for _ in range(10):
             policy_loss, value_loss = self.agent.learn_policy(
-                sampled_probs=probs,
+                sampled_action_probs=probs,
                 sampled_advantages=advantages,
                 sampled_states=states,
                 sampled_actions=actions,

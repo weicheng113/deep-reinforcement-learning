@@ -1,10 +1,14 @@
 import torch.nn as nn
 import torch.distributions as distributions
+import torch
+import numpy as np
 
 
 class Actor(nn.Module):
-    def __init__(self, action_dim):
+    def __init__(self, action_dim, seed=0):
         super(Actor, self).__init__()
+        torch.manual_seed(seed)
+        np.random.seed(seed)
 
         in_channels = 2
         conv_channels = [4, 16]
@@ -31,14 +35,16 @@ class Actor(nn.Module):
         if action is None:
             action = dist.sample()
 
-        action.unsqueeze_(1)
-        prob = dist.probs.gather(1, action)
-        return action, prob
+        prob_selection = action.unsqueeze(1)
+        prob = dist.probs.gather(1, prob_selection)
+        return action, prob, dist.entropy()
 
 
 class Critic(nn.Module):
-    def __init__(self):
+    def __init__(self, seed=0):
         super(Critic, self).__init__()
+        torch.manual_seed(seed)
+        np.random.seed(seed)
 
         in_channels = 2
         conv_channels = [4, 16]
