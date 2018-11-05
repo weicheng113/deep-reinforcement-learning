@@ -1,4 +1,6 @@
 import multiprocessing as mp
+from multiprocessing import Pipe
+# from memory_profiler import profile
 
 
 class EnvProcess(mp.Process):
@@ -16,6 +18,7 @@ class EnvProcess(mp.Process):
         while True:
             op, data = self.pipe.recv()
             if op == EnvProcess.Step:
+                # self.step(env, data)
                 self.pipe.send(env.step(data))
             elif op == EnvProcess.Reset:
                 self.pipe.send(env.reset())
@@ -24,6 +27,10 @@ class EnvProcess(mp.Process):
                 break
             else:
                 raise Exception(f"Unknown command: {op}")
+
+    # @profile
+    # def step(self, env, data):
+    #     self.pipe.send(env.step(data))
 
 
 class ProcessTask:
@@ -50,6 +57,7 @@ class ParallelTask:
         self.tasks = [ProcessTask(create_env=create_env) for _ in range(n_tasks)]
         self.size = n_tasks
 
+    # @profile
     def step(self, actions):
         results = [task.step(action) for task, action in zip(self.tasks, actions)]
         return results

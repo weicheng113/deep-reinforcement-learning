@@ -107,8 +107,8 @@ class Agent:
                     sampled_actions=sampled_actions,
                     sampled_returns=sampled_returns)
 
-        policy_losses.append(policy_loss.item())
-        value_losses.append(value_loss.item())
+        policy_losses.append(float(policy_loss.item()))
+        value_losses.append(float(value_loss.item()))
 
         # the clipping parameter reduces as time goes on
         self.epsilon *= 0.999
