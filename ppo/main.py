@@ -14,7 +14,7 @@ def run():
     # snapshot1 = tracemalloc.take_snapshot()
 
     def create_env():
-        return PongDeterministic()
+        return PongDeterministic(skip_num_frames=1)
     envs = ParallelTask(create_env=create_env, n_tasks=8)
 
     env = create_env()
@@ -46,7 +46,7 @@ def run():
         seed=seed)
     try:
         load_model_if_exists(agent)
-        scores = train(envs=envs, agent=agent, episodes=200)
+        scores = train(envs=envs, agent=agent, episodes=5000, max_t=2000)
         plot_scores(scores)
     finally:
         print("complete")

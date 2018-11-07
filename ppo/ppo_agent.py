@@ -6,7 +6,7 @@ from batcher import Batcher
 
 
 class Agent:
-    def __init__(self, create_actor, create_critic, num_parallels, optimization_epochs=4, batch_size=256,
+    def __init__(self, create_actor, create_critic, state_dim, num_parallels, optimization_epochs=4, batch_size=256,
                  discount=0.99, epsilon=0.1, entropy_weight=0.01, lr=1e-4, device='cpu', seed=0):
         torch.manual_seed(seed)
         np.random.seed(seed)
@@ -15,6 +15,7 @@ class Agent:
         self.critic = create_critic()
         self.optimizer = optim.Adam(list(self.actor.parameters()) + list(self.critic.parameters()), lr=lr)
 
+        self.state_dim = state_dim
         self.discount = discount
         self.epsilon = epsilon
         self.entropy_weight = entropy_weight
@@ -25,7 +26,8 @@ class Agent:
         self.num_parallels = num_parallels
 
     def act(self, states):
-        states = torch.tensor(states, dtype=torch.float, device=self.device)
+        shape = (-1, ) + self.state_dim
+        states = torch.tensor(states, dtype=torch.float, device=self.device).view(shape)
         self.actor.eval()
         with torch.no_grad():
             actions, probs, _ = self.actor(states)
@@ -33,7 +35,7 @@ class Agent:
 
         return actions.cpu().detach().numpy().squeeze(), probs.cpu().detach().numpy().squeeze()
 
-    def step(self, i_episode, states, actions, action_probs, rewards, next_states, dones):
+    def step(self, states, actions, action_probs, rewards, next_states, dones):
         self.parallel_trajectory.add(
             parallel_states=states,
             parallel_actions=actions,
@@ -42,23 +44,23 @@ class Agent:
             parallel_next_states=next_states,
             parallel_dones=dones)
 
-        if np.any(dones):
-            states, actions, action_probs, rewards, next_states, dones = self.parallel_trajectory.numpy()
-            returns = self.parallel_trajectory.discounted_returns(self.discount)
-            states_tensor, actions_tensor, action_probs_tensor, returns_tensor, next_states_tensor = self.to_tensor(
-                states=states,
-                actions=actions,
-                action_probs=action_probs,
-                returns=returns,
-                next_states=next_states)
-            self.learn(
-                states=states_tensor,
-                actions=actions_tensor,
-                action_probs=action_probs_tensor,
-                returns=returns_tensor,
-                next_states=next_states_tensor)
-            del self.parallel_trajectory
-            self.parallel_trajectory = ParallelTrajectory(n=self.num_parallels)
+    def episode_done(self, i_episode):
+        states, actions, action_probs, rewards, next_states, dones = self.parallel_trajectory.numpy()
+        returns = self.parallel_trajectory.discounted_returns(self.discount)
+        states_tensor, actions_tensor, action_probs_tensor, returns_tensor, next_states_tensor = self.to_tensor(
+            states=states,
+            actions=actions,
+            action_probs=action_probs,
+            returns=returns,
+            next_states=next_states)
+        self.learn(
+            states=states_tensor,
+            actions=actions_tensor,
+            action_probs=action_probs_tensor,
+            returns=returns_tensor,
+            next_states=next_states_tensor)
+        del self.parallel_trajectory
+        self.parallel_trajectory = ParallelTrajectory(n=self.num_parallels)
 
     def to_tensor(self, states, actions, action_probs, returns, next_states):
         states = torch.from_numpy(states).float().to(self.device)
