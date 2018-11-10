@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import torch.nn.functional as f
 import torch.optim as optim
+import time
 
 
 class MultiAgent:
@@ -85,6 +86,7 @@ class MultiAgent:
         agent_rewards = sampled_rewards[:, agent_i].view(-1, 1)
         agent_dones = sampled_dones[:, agent_i].view(-1, 1)
 
+        start = time.time()
         # Update critic
         next_actions = self.target_act(sampled_next_states)
         q_target_next = agent.critic_target(
@@ -94,10 +96,12 @@ class MultiAgent:
         q_local = agent.critic(sampled_full_states, sampled_actions.view(-1, self.whole_action_dim))
 
         critic_loss = f.mse_loss(input=q_local, target=q_target.detach())
+        time1 = time.time() - start
 
         agent.critic.zero_grad()
         critic_loss.backward()
         agent.critic_optimizer.step()
+        time2 = time.time() - start
 
         # Update the actor policy
         agent_states = sampled_states[:, agent_i]
@@ -108,9 +112,13 @@ class MultiAgent:
         actor_objective = agent.critic(
             sampled_full_states,
             actions.view(-1, self.whole_action_dim)).mean()
+        time3 = time.time() - start
+
         agent.actor.zero_grad()
         (-actor_objective).backward()
         agent.actor_optimizer.step()
+        time4 = time.time() - start
+        print(f"time1: {time1}, time2: {time2}, time3: {time3}, time4: {time4}")
 
         actor_loss_value = (-actor_objective).cpu().detach().item()
         critic_loss_value = critic_loss.cpu().detach().item()

@@ -5,6 +5,7 @@ import torch
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import time
 
 
 def train(env, agent, episodes=5000, max_t=500, print_every=50):
@@ -19,6 +20,7 @@ def train(env, agent, episodes=5000, max_t=500, print_every=50):
         agent.reset()
         score = np.zeros(env.num_agents)
         steps = 0
+        start = time.time()
 
         for t in range(max_t):
             actions = agent.act(states, add_noise=True)
@@ -35,11 +37,14 @@ def train(env, agent, episodes=5000, max_t=500, print_every=50):
         scores.append(np.max(score))
         steps_deque.append(steps)
 
-        print(f"\rEpisode {i_episode}/{episodes}\
-            Score: {np.max(score):.2f}\
-            Average Score: {np.mean(scores_deque):.2f}\
-            Max Score: {np.max(scores_deque):.2f}\
-            Average steps: {np.mean(steps_deque):.2f}", end="")
+        time_spent = time.time() - start
+        print(f"Episode {i_episode}/{episodes}\t",
+              f"Score: {np.max(score):.2f}\t",
+              f"Steps: {steps}\t",
+              f"Average Score: {np.mean(scores_deque):.2f}\t",
+              f"Max Score: {np.max(scores_deque):.2f}\t",
+              f"Average steps: {np.mean(steps_deque):.2f}\t",
+              f"Time spent: {time_spent:.4f} seconds")
         if i_episode % print_every == 0:
             print()
             timer.update(i_episode)
