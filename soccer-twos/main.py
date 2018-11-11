@@ -19,7 +19,7 @@ def run():
     learning_rate_actor = 1e-4
     learning_rate_critic = 1e-3
     seed = 2
-    episodes_before_train = 1
+    episodes_before_train = 50
     batch_size = 128
     tau = 1e-3
     full_action_dim = env.goalie_action_size * env.num_goalies + env.striker_action_size * env.num_strikers
