@@ -57,7 +57,8 @@ class MultiAgent:
 
             policy_losses = []
             value_losses = []
-            for i, agent in enumerate(self.agents):
+            for i in range(self.num_agents):
+                agent = self.agents[i]
                 policy_loss, value_loss = agent.learn(
                     states=states_tensor[:, i],
                     full_states=full_states_tensor,
