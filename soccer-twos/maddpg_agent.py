@@ -8,7 +8,7 @@ import time
 class MultiAgent:
     def __init__(self, agents, replay_buffer, full_action_dim,
                  episodes_before_train, device="cpu", batch_size=128, discount=0.99,
-                 initial_noise_scale=1.0, noise_reduction=0.999998, seed=0):
+                 initial_noise_scale=1.0, noise_reduction=0.98, seed=0):
         torch.manual_seed(seed)
         np.random.seed(seed)
 
@@ -22,7 +22,6 @@ class MultiAgent:
         self.discount = discount
         self.noise_scale = initial_noise_scale
         self.noise_reduction = noise_reduction
-        self.i_episode = 0
 
     def reset(self):
         for agent in self.agents:
@@ -32,9 +31,6 @@ class MultiAgent:
         selected_noise_scale = self.noise_scale
         if not add_noise:
             selected_noise_scale = 0.0
-        elif (self.i_episode >= self.episodes_before_train) and (self.noise_scale > 0.01):
-            self.noise_scale *= self.noise_reduction
-            selected_noise_scale = self.noise_scale
 
         actions = [agent.act(s, noise_scale=selected_noise_scale) for s, agent in zip(states, self.agents)]
         return np.array(actions)
@@ -46,15 +42,18 @@ class MultiAgent:
         self.buffer.add(state=states, full_state=full_state, action=actions, full_action=full_action,
                         reward=rewards, next_state=next_states, full_next_state=full_next_state, done=dones)
 
-        self.i_episode = i_episode
         if (i_episode >= self.episodes_before_train) and (self.buffer.size() >= self.batch_size):
-            if (self.i_episode == self.episodes_before_train) and np.any(dones):
+            if (i_episode == self.episodes_before_train) and np.any(dones):
                 print("\nStart training...")
 
             for agent_i in range(self.num_agents):
                 samples = self.buffer.sample(self.batch_size)
                 self.learn(agent_i, self.to_tensor(samples))
             self.soft_update_all()
+
+    def episode_done(self, i_episode):
+        if (i_episode >= self.episodes_before_train) and (self.noise_scale > 0.01):
+            self.noise_scale *= self.noise_reduction
 
     def soft_update_all(self):
         for agent in self.agents:

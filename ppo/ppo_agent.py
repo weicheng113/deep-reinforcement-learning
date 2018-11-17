@@ -189,7 +189,7 @@ class ParallelTrajectory:
         # for i, dones in enumerate(self.dones):
         #     if np.any(dones):
         #         print(f"step {i}, dones: {dones}")
-        for i in reversed(range(n_rewards - 1)):
+        for i in reversed(range(n_rewards)):
             rewards = np.array(self.rewards[i])
             dones = np.array(self.dones[i]).astype(np.uint8)
             running_return = rewards + discount * (1.0-dones) * running_return

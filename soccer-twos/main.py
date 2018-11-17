@@ -77,7 +77,7 @@ def run():
         batch_size=batch_size,
         discount=0.99,
         initial_noise_scale=1.0,
-        noise_reduction=0.99,
+        noise_reduction=0.98,
         seed=seed)
     scores = train(env=env, agent=multi_agent)
     plot_scores(scores)

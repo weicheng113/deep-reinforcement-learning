@@ -1,6 +1,6 @@
 import progressbar as pb
 import numpy as np
-from collections import deque
+# from collections import deque
 import torch
 import pandas as pd
 import seaborn as sns
@@ -34,6 +34,7 @@ def train(env, agent, episodes=1000, max_t=500, print_every=50):
             steps += 1
             if np.any(dones):
                 break
+        agent.episode_done(i_episode)
 
         # scores_deque.append(np.max(score))
         scores.append(np.max(score))
@@ -48,6 +49,12 @@ def train(env, agent, episodes=1000, max_t=500, print_every=50):
         if i_episode % print_every == 0:
             print()
             timer.update(i_episode)
+
+        if i_episode % 50 == 0:
+            print(f"saving model at {i_episode}")
+            for i, agent_i in enumerate(agent.agents):
+                torch.save(agent_i.actor.state_dict(), f"checkpoint_actor_{i}_episode_{i_episode}.pth")
+                torch.save(agent_i.critic.state_dict(), f"checkpoint_critic_{i}_episode_{i_episode}.pth")
 
         #         if (scores_deque[0]>0.5) and (np.mean(scores_deque) > 0.5):
         # if np.mean(scores_deque) > 0.5:

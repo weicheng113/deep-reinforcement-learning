@@ -19,6 +19,7 @@ def run():
 
     env = create_env()
     action_dim = env.action_space.n
+    state_dim = env.observation_space.shape
     seed = 0
 
     def create_actor():
@@ -37,6 +38,7 @@ def run():
         create_actor=create_actor,
         create_critic=create_critic,
         num_parallels=envs.size,
+        state_dim=state_dim,
         optimization_epochs=optimization_epochs,
         discount=discount,
         epsilon=epsilon,
