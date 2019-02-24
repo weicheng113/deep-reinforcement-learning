@@ -10,6 +10,10 @@ def run_training():
     checkpoints_dir = "checkpoints"
     make_checkpoints_dir(checkpoints_dir)
 
+    # unity_env = UnityEnvironment(file_name='Reacher_Linux/Reacher.x86_64')
+    unity_env = UnityEnvironment(file_name='Reacher_Linux_NoVis/Reacher.x86_64')
+    env = EnvMultipleWrapper(env=unity_env, train_mode=True)
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     seed = 2
     learning_rate = 1e-4
@@ -32,12 +36,10 @@ def run_training():
         + f", entropy_weight: {entropy_weight}, entropy_reduction_rate: {entropy_reduction_rate}"
         + f", discount: {discount}, max_grad_norm: {max_grad_norm}, value_loss_weight: {value_loss_weight}"
         + f", episodes: {episodes}, max_t: {max_t}"
+        + f", number of agents: {env.num_agents}"
         + f", with 2 batchNorm in critic"
         + f", with elu")
     logger = SummaryWriter()
-
-    unity_env = UnityEnvironment(file_name='Reacher_Linux/Reacher.x86_64')
-    env = EnvMultipleWrapper(env=unity_env, train_mode=True)
 
     agent = create_agent(
         env=env,
