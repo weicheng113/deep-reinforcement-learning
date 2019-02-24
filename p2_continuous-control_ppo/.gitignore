@@ -1,0 +1,8 @@
+/.idea
+/.ipynb_checkpoints
+/*.app/**
+/*.zip
+/__pycache__/**
+/checkpoints*/**
+Reacher_Linux/**
+runs/**
