@@ -15,10 +15,10 @@ def run_training():
     env = EnvMultipleWrapper(env=unity_env, train_mode=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f"device: {device}")
     seed = 2
     learning_rate = 1e-4
-    batch_size = 128
-    hidden_units = 300
+    batch_size = 256
     clip_ratio = 0.2
     optimization_epochs = 10
     entropy_weight = 0.01
@@ -31,22 +31,20 @@ def run_training():
     logger = SummaryWriter()
     logger.add_text(
         "Hyper-parameters",
-        f"learning_rate: {learning_rate}, batch_size: {batch_size}, hidden_units: {hidden_units}"
+        f"learning_rate: {learning_rate}, batch_size: {batch_size}"
         + f", clip_ratio: {clip_ratio}, optimization_epochs: {optimization_epochs}"
         + f", entropy_weight: {entropy_weight}, entropy_reduction_rate: {entropy_reduction_rate}"
         + f", discount: {discount}, max_grad_norm: {max_grad_norm}, value_loss_weight: {value_loss_weight}"
         + f", episodes: {episodes}, max_t: {max_t}"
         + f", number of agents: {env.num_agents}"
         + f", with 2 batchNorm in critic"
-        + f", with elu")
-    logger = SummaryWriter()
+        + f", hidden_units [300, 300] with elu")
 
     agent = create_agent(
         env=env,
         learning_rate=learning_rate,
         batch_size=batch_size,
         discount=discount,
-        hidden_units=hidden_units,
         clip_ratio=clip_ratio,
         optimization_epochs=optimization_epochs,
         value_loss_weight=value_loss_weight,

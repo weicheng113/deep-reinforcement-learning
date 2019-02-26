@@ -57,20 +57,18 @@ def train(env, agent, episodes, max_t, print_every, logger, checkpoints_dir):
 
 
 def create_agent(env, learning_rate, batch_size, discount,
-                 hidden_units, clip_ratio, optimization_epochs, value_loss_weight,
+                 clip_ratio, optimization_epochs, value_loss_weight,
                  entropy_weight, entropy_reduction_rate, max_grad_norm, device,
                  seed, logger):
     def create_actor():
         return Actor(
             state_size=env.state_size,
             action_size=env.action_size,
-            hidden_units=hidden_units,
             seed=seed).to(device)
 
     def create_critic():
         return Critic(
             state_size=env.state_size,
-            hidden_units=hidden_units,
             seed=seed).to(device)
 
     agent = PPOAgent(

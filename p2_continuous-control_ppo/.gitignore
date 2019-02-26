@@ -4,5 +4,5 @@
 /*.zip
 /__pycache__/**
 /checkpoints*/**
-Reacher_Linux/**
+Reacher_Linux*/**
 runs/**

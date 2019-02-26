@@ -168,7 +168,7 @@ class PPOAgent:
         self.optimizer.step()
 
         policy_objective_value = objective.mean().cpu().detach().numpy().squeeze().item()
-        value_loss_value = value_loss.cpu().detach().numpy().squeeze().item()
+        value_loss_value = self.value_loss_weight * value_loss.cpu().detach().numpy().squeeze().item()
         entropy_value = (self.entropy_weight * entropy).mean().cpu().detach().numpy().squeeze().item()
 
         return float(policy_objective_value), float(value_loss_value), float(entropy_value)

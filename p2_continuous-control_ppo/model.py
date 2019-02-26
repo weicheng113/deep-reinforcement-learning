@@ -11,14 +11,15 @@ def init_weights(m):
 
 
 class Actor(nn.Module):
-    def __init__(self, state_size, action_size, hidden_units, seed):
+    def __init__(self, state_size, action_size, seed):
         super(Actor, self).__init__()
 
         torch.manual_seed(seed)
+        hidden_units = [300, 300]
 
-        self.fc1 = nn.Linear(state_size, hidden_units)
-        self.fc2 = nn.Linear(hidden_units, hidden_units)
-        self.output = nn.Linear(in_features=hidden_units, out_features=action_size)
+        self.fc1 = nn.Linear(state_size, hidden_units[0])
+        self.fc2 = nn.Linear(hidden_units[0], hidden_units[1])
+        self.output = nn.Linear(in_features=hidden_units[1], out_features=action_size)
         self.std = nn.Parameter(torch.zeros(action_size))
 
         init_weights(self.fc1)
@@ -46,16 +47,16 @@ class Actor(nn.Module):
 
 
 class Critic(nn.Module):
-    def __init__(self, state_size, hidden_units, seed):
+    def __init__(self, state_size, seed):
         super(Critic, self).__init__()
 
         torch.manual_seed(seed)
-
-        self.fc1 = nn.Linear(in_features=state_size, out_features=hidden_units)
-        self.fc2 = nn.Linear(in_features=hidden_units, out_features=hidden_units)
-        self.output = nn.Linear(in_features=hidden_units, out_features=1)
+        hidden_units = [300, 300]
+        self.fc1 = nn.Linear(in_features=state_size, out_features=hidden_units[0])
+        self.fc2 = nn.Linear(in_features=hidden_units[0], out_features=hidden_units[1])
+        self.output = nn.Linear(in_features=hidden_units[1], out_features=1)
         self.bn1 = nn.BatchNorm1d(num_features=state_size)
-        self.bn2 = nn.BatchNorm1d(num_features=hidden_units)
+        self.bn2 = nn.BatchNorm1d(num_features=hidden_units[0])
 
         init_weights(self.fc1)
         init_weights(self.fc2)
